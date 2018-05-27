@@ -328,7 +328,7 @@ class MonzoAPI(CommonMixin):
 
         return pots
 
-    def transactions(self, account_id=None, reverse=True, limit=None):
+    def transactions(self, account_id=None, limit=None, since=None, before=None, expand_merchant=False):
         """
         Returns a list of transactions on the user's account.
 
@@ -350,24 +350,28 @@ class MonzoAPI(CommonMixin):
             else:
                 raise ValueError("You need to pass account ID")
 
+        params={
+            'account_id': account_id,
+        }
+
+        if since is not None:
+            params["since"] = since
+
+        if before is not None:
+            params["before"] = before
+
+        if limit is not None:
+            params["limit"] = limit
+
+        if expand_merchant:
+            params["expand[]"] = "merchant"
+
         endpoint = '/transactions'
         response = self._get_response(
-            method='get', endpoint=endpoint,
-            params={
-                'account_id': account_id,
-            },
+            method='get', endpoint=endpoint, params=params,
         )
 
-        # The API does not allow reversing the list or limiting it, so to do
-        # the basic query of 'get the latest transaction' we need to always get
-        # all transactions and do the reversing and slicing in Python
-        # I send Monzo an email, we'll se how they'll respond
         transactions = response.json()['transactions']
-        if reverse:
-            transactions.reverse()
-
-        if limit:
-            transactions = transactions[:limit]
 
         return [MonzoTransaction(data=t) for t in transactions]
 
